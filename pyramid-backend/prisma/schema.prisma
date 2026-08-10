@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects  Project[]
+  tasks     Task[]
+  projectsLead Project[] @relation("lead")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  title     String
+  priority  String   @default("No Priority") // No Priority, Urgent, High, Medium, Low
+  dueDate   DateTime?
+  status    String   @default("Active") // Active, Archived
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  leadId    String?
+  lead      User?    @relation("lead", fields: [leadId], references: [id], onDelete: SetNull)
+
+  tasks     Task[]
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("To Do") // To Do, Doing, Completed, On Hold, Backlog
+  priority    String   @default("No Priority") // No Priority, Urgent, High, Medium, Low
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
