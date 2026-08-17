@@ -5,9 +5,10 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
+import { WebSocketModule } from './websocket/websocket.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, ProjectsModule, TasksModule],
+  imports: [PrismaModule, AuthModule, ProjectsModule, TasksModule, WebSocketModule],
   controllers: [AppController],
   providers: [AppService],
 })
