@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventsGateway } from '../websocket/events.gateway';
 
 @Injectable()
 export class TasksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventsGateway: EventsGateway,
+  ) {}
 
   // Create task
   async create(data: {
@@ -15,13 +19,18 @@ export class TasksService {
     projectId: string;
     userId: string;
   }) {
-    return await this.prisma.task.create({
+    const task = await this.prisma.task.create({
       data,
       include: {
         project: true,
         user: { select: { id: true, email: true, name: true } },
       },
     });
+
+    // Broadcast to project room
+    this.eventsGateway.emitProjectUpdate(data.projectId, task);
+    this.eventsGateway.emitTaskChange('created', task);
+    return task;
   }
 
   // Get all tasks for a project
@@ -59,7 +68,7 @@ export class TasksService {
 
   // Update task
   async update(id: string, data: any) {
-    return await this.prisma.task.update({
+    const task = await this.prisma.task.update({
       where: { id },
       data,
       include: {
@@ -67,12 +76,22 @@ export class TasksService {
         user: { select: { id: true, email: true, name: true } },
       },
     });
+
+    // Broadcast updates
+    this.eventsGateway.emitProjectUpdate(task.projectId, task);
+    this.eventsGateway.emitTaskChange('updated', task);
+    return task;
   }
 
   // Delete task
   async remove(id: string) {
-    return await this.prisma.task.delete({
-      where: { id },
-    });
+    const task = await this.prisma.task.findUnique({ where: { id } });
+    
+    await this.prisma.task.delete({ where: { id } });
+
+    // Broadcast deletion
+    this.eventsGateway.emitProjectUpdate(task!.projectId, task);
+    this.eventsGateway.emitTaskChange('deleted', task);
+    return task;
   }
 }

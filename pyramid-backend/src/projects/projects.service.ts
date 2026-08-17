@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventsGateway } from '../websocket/events.gateway';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventsGateway: EventsGateway
+  ) {}
 
   // Create project
   async create(data: {
@@ -13,7 +17,7 @@ export class ProjectsService {
     userId: string;
     leadId?: string;
   }) {
-    return await this.prisma.project.create({
+    const project = await this.prisma.project.create({
       data,
       include: {
         user: { select: { id: true, email: true, name: true } },
@@ -21,6 +25,10 @@ export class ProjectsService {
         tasks: true,
       },
     });
+
+    // Broadcast to all clients
+    this.eventsGateway.emitProjectChange('created', project);
+    return project;
   }
 
   // Get all projects for a user
@@ -53,7 +61,7 @@ export class ProjectsService {
 
   // Update project
   async update(id: string, data: any) {
-    return await this.prisma.project.update({
+    const project = await this.prisma.project.update({
       where: { id },
       data,
       include: {
@@ -62,12 +70,20 @@ export class ProjectsService {
         tasks: true,
       },
     });
+
+    // Broadcast to all clients
+    this.eventsGateway.emitProjectChange('updated', project);
+    return project;
   }
 
   // Delete project
   async remove(id: string) {
-    return await this.prisma.project.delete({
+    const project = await this.prisma.project.delete({
       where: { id },
     });
+
+    // Broadcast to all clients
+    this.eventsGateway.emitProjectChange('deleted', project);
+    return project;
   }
 }
