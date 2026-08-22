@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
@@ -58,28 +58,49 @@ export class AuthService {
   }
 
   async guestLogin() {
-    // Create/return guest user
-    let guestUser = await this.prisma.user.findUnique({
-      where: { email: 'guest@pyramid.com' },
-    });
+    try {
+      // Test database connection first
+      await this.prisma.$queryRaw`SELECT 1`;
+      
+      console.log('Database connected successfully');
 
-    if (!guestUser) {
-      guestUser = await this.prisma.user.create({
-        data: {
-          email: 'guest@pyramid.com',
-          password: 'guest-password',
-          name: 'Guest User',
-        },
+      // Create/return guest user
+      let guestUser = await this.prisma.user.findUnique({
+        where: { email: 'guest@pyramid.com' },
       });
+
+      if (!guestUser) {
+        // Use plain password for guest (not hashed for now)
+        guestUser = await this.prisma.user.create({
+          data: {
+            email: 'guest@pyramid.com',
+            password: 'guest-password-plain',
+            name: 'Guest User',
+          },
+        });
+      }
+
+      // Generate JWT for guest
+      const token = this.jwtService.sign({
+        id: guestUser.id,
+        email: guestUser.email,
+      });
+
+      return { 
+        user: { 
+          id: guestUser.id, 
+          email: guestUser.email, 
+          name: guestUser.name 
+        }, 
+        token 
+      };
+    } catch (error: any) {
+      console.error('Guest login error:', error);
+      throw new HttpException(
+        'Guest login failed: ' + error.message,
+        HttpStatus.BAD_REQUEST,
+      );
     }
-
-    // Generate JWT for guest
-    const token = this.jwtService.sign({
-      id: guestUser.id,
-      email: guestUser.email,
-    });
-
-    return { user: { id: guestUser.id, email: guestUser.email, name: guestUser.name }, token };
   }
 
   async validateUser(id: string) {
