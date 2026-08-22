@@ -28,9 +28,14 @@ export class AuthController {
   @Post('guest-login')
   async guestLogin() {
     try {
-      return await this.authService.guestLogin();
-    } catch (error) {
-      throw new HttpException('Guest login failed', HttpStatus.BAD_REQUEST);
+      const result = await this.authService.guestLogin();
+      return result;
+    } catch (error: any) {
+      console.error('Guest login error:', error);
+      throw new HttpException(
+        error.message || 'Guest login failed',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 }

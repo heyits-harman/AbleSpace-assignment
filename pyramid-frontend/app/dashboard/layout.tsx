@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
@@ -11,18 +11,25 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  if (!user) {
-    router.push('/');
-    return null;
-  }
+  useEffect(() => {
+    // Only redirect once authentication state has finished loading
+    if (!loading && !user) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
 
   const handleLogout = () => {
     logout();
     router.push('/');
   };
+
+  // Prevent rendering children/UI while checking auth status or when user is null
+  if (loading || !user) {
+    return null; // Or return a loading spinner component
+  }
 
   return (
     <div className="flex h-screen bg-white">
@@ -34,7 +41,7 @@ export default function DashboardLayout({
             <div className="w-8 h-8 bg-black rounded flex items-center justify-center">
               <span className="text-white text-sm font-bold">△</span>
             </div>
-            <span className="text-xl font-bold text-black">Pyramid</span>
+            <span className="text-xl font-bold text-black">Nonamid</span>
           </div>
         </div>
 
@@ -55,7 +62,6 @@ export default function DashboardLayout({
         {/* Workspace */}
         <div className="p-4 border-b border-gray-200">
           <p className="text-xs font-semibold text-gray-600 mb-2">WORKSPACE</p>
-          <button className="text-sm text-gray-700 hover:text-black">▼ Workspace</button>
         </div>
 
         {/* Navigation */}
